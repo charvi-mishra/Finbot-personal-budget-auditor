@@ -1,0 +1,54 @@
+name: piggy_bank_chatbot
+description: A smart expense tracking chatbot with Firebase
+
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_dotenv: ^5.2.1
+  # Firebase
+  firebase_core: ^3.15.2
+  firebase_auth: ^5.7.0
+  cloud_firestore: ^5.6.12
+
+  # HTTP / AI
+  http: ^1.2.2
+  googleai_dart: ^4.0.0   
+
+  # UI
+  flutter_animate: ^4.5.0
+  google_fonts: ^6.2.1
+  fl_chart: ^0.68.0
+  lottie: ^3.1.2
+  flutter_svg: ^2.0.10+1
+  intl: ^0.19.0
+  country_picker: ^2.0.26
+  shimmer: ^3.0.0
+
+  # State & Utils
+  provider: ^6.1.2
+  shared_preferences: ^2.3.2
+  uuid: ^4.4.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+  flutter_launcher_icons: ^0.13.1
+
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: true
+  image_path: "assets/icons/app_icon.png"
+  remove_alpha_ios: true 
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/icons/
+    - .env

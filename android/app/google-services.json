@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "87944824167",
+    "project_id": "pig-bank-chatbot-7dbde",
+    "storage_bucket": "pig-bank-chatbot-7dbde.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:87944824167:android:09462fe31fb5b421049bc2",
+        "android_client_info": {
+          "package_name": "com.example.pig_bank_chatbot"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBpe_zfSsxwbQ1P4dBan5sy9N8QxDFdxJg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:87944824167:android:3e1b66ace175a3ef049bc2",
+        "android_client_info": {
+          "package_name": "com.example.piggy_bank_chatbot"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBpe_zfSsxwbQ1P4dBan5sy9N8QxDFdxJg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
