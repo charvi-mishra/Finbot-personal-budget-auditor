@@ -467,6 +467,7 @@ class _HomeScreenState extends State<HomeScreen>
           description: '',
           date: DateTime.now(),
           rawMessage: '',
+          isExpense: true,
         );
 
         return Container(
@@ -550,6 +551,9 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   Widget _transactionTile(Expense expense, String symbol) {
+    final amountColor = expense.isExpense ? AppTheme.danger : AppTheme.success;
+    final amountPrefix = expense.isExpense ? '-' : '+';
+
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
@@ -613,11 +617,11 @@ class _HomeScreenState extends State<HomeScreen>
             ),
           ),
           Text(
-            '-$symbol${expense.amount.toStringAsFixed(0)}',
+            '$amountPrefix$symbol${expense.amount.toStringAsFixed(0)}',
             style: GoogleFonts.nunito(
               fontSize: 15,
               fontWeight: FontWeight.w800,
-              color: AppTheme.danger,
+              color: amountColor,
             ),
           ),
         ],

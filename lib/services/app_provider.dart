@@ -19,13 +19,15 @@ class AppProvider extends ChangeNotifier {
 
   Map<String, double> get categoryTotals {
     final Map<String, double> totals = {};
-    for (final e in _expenses) {
+    for (final e in _expenses.where((expense) => expense.isExpense)) {
       totals[e.category] = (totals[e.category] ?? 0) + e.amount;
     }
     return totals;
   }
 
-  double get totalSpent => _expenses.fold(0, (sum, e) => sum + e.amount);
+  double get totalSpent => _expenses
+      .where((expense) => expense.isExpense)
+      .fold(0, (sum, e) => sum + e.amount);
 
   double get currentSavings {
     if (_user == null) return 0;

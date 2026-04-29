@@ -250,6 +250,7 @@ YOUR BEHAVIOR:
           description: parsed.description,
           date: parsed.date,
           rawMessage: rawMessage,
+          isExpense: true,
         );
         await _expenseService.addExpense(expense);
         debugPrint(
@@ -274,6 +275,7 @@ YOUR BEHAVIOR:
           description: parsed.description,
           date: parsed.date,
           rawMessage: rawMessage,
+          isExpense: false,
         );
         await _expenseService.addExpense(income);
         debugPrint(
@@ -322,7 +324,20 @@ YOUR BEHAVIOR:
 
     final isExpense = !_containsAny(
       normalized,
-      ['received', 'got paid', 'earned', 'income', 'salary', 'credited'],
+      [
+        'received',
+        'got paid',
+        'got ',
+        'earned',
+        'income',
+        'salary',
+        'credited',
+        'credit',
+        'gifted',
+        'gift from',
+        'cashback',
+        'refund',
+      ],
     );
 
     final category = _detectCategory(normalized);
@@ -369,7 +384,18 @@ YOUR BEHAVIOR:
       'Subscriptions': ['subscription', 'spotify', 'membership'],
       'Electronics': ['phone', 'laptop', 'electronics', 'charger'],
       'Gifts': ['gift', 'present'],
-      'Income': ['salary', 'earned', 'received', 'income', 'credited'],
+      'Income': [
+        'salary',
+        'earned',
+        'received',
+        'income',
+        'credited',
+        'credit',
+        'got ',
+        'gift',
+        'cashback',
+        'refund',
+      ],
     };
 
     for (final entry in categoryRules.entries) {

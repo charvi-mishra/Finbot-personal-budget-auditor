@@ -9,6 +9,7 @@ class Expense {
   final String description;
   final DateTime date;
   final String rawMessage;
+  final bool isExpense;
 
   Expense({
     required this.id,
@@ -19,20 +20,37 @@ class Expense {
     required this.description,
     required this.date,
     required this.rawMessage,
+    required this.isExpense,
   });
 
   factory Expense.fromMap(Map<String, dynamic> map, String id) {
+    final category = map['category'] ?? 'Other';
+    final description = map['description'] ?? '';
+    final rawMessage = map['rawMessage'] ?? '';
+    final normalizedText = '$category $description $rawMessage'.toLowerCase();
+    final inferredIsExpense = !(normalizedText.contains('income') ||
+        normalizedText.contains('received') ||
+        normalizedText.contains('got ') ||
+        normalizedText.contains('salary') ||
+        normalizedText.contains('credited') ||
+        normalizedText.contains('gift') ||
+        normalizedText.contains('cashback') ||
+        normalizedText.contains('refund'));
+
     return Expense(
       id: id,
       userId: map['userId'] ?? '',
       amount: (map['amount'] as num?)?.toDouble() ?? 0.0,
       currency: map['currency'] ?? 'INR',
-      category: map['category'] ?? 'Other',
-      description: map['description'] ?? '',
+      category: category,
+      description: description,
       date: map['date'] is Timestamp
           ? (map['date'] as Timestamp).toDate()
           : DateTime.tryParse(map['date'] ?? '') ?? DateTime.now(),
-      rawMessage: map['rawMessage'] ?? '',
+      rawMessage: rawMessage,
+      isExpense: map.containsKey('isExpense')
+          ? map['isExpense'] ?? true
+          : inferredIsExpense,
     );
   }
 
@@ -44,6 +62,7 @@ class Expense {
         'description': description,
         'date': Timestamp.fromDate(date),
         'rawMessage': rawMessage,
+        'isExpense': isExpense,
       };
 
   String get categoryEmoji {
