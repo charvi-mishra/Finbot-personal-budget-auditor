@@ -73,7 +73,7 @@ class _HomeScreenState extends State<HomeScreen>
         final expenses = provider.expenses;
         final categoryTotals = provider.categoryTotals;
         final totalSpent = provider.totalSpent;
-        final effectiveSavings = provider.effectiveSavings;
+        final currentSavings = provider.currentSavings;
         final currSymbol = _getCurrencySymbol(user?.country ?? 'India');
 
         return Scaffold(
@@ -194,7 +194,7 @@ class _HomeScreenState extends State<HomeScreen>
                                         child: _miniStat(
                                           'Savings',
                                           _formatCurrency(
-                                              effectiveSavings,
+                                              currentSavings,
                                               user?.country),
                                           Icons.savings_rounded,
                                         ),

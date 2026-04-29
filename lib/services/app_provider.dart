@@ -3,7 +3,7 @@ import '../models/user_model.dart';
 import '../models/expense_model.dart';
 import '../services/auth_service.dart';
 import '../services/expense_service.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+// import 'package:cloud_firestore/cloud_firestore.dart';
 
 class AppProvider extends ChangeNotifier {
   final AuthService _authService = AuthService();
@@ -27,11 +27,9 @@ class AppProvider extends ChangeNotifier {
 
   double get totalSpent => _expenses.fold(0, (sum, e) => sum + e.amount);
 
-  double get effectiveSavings {
+  double get currentSavings {
     if (_user == null) return 0;
-    final income = _user!.monthlyIncome ?? 0;
-    final savings = _user!.currentSavings ?? 0;
-    return savings + income;
+    return _user!.currentSavings ?? 0;
   }
 
   Future<void> loadUser(String uid) async {

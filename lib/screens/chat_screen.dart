@@ -1,6 +1,8 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 import '../models/expense_model.dart';
 import '../services/chat_service.dart';
@@ -16,6 +18,7 @@ class ChatScreen extends StatefulWidget {
 }
 
 class _ChatScreenState extends State<ChatScreen> {
+  static const String _chatStorageKeyPrefix = 'chat_messages_';
   final _msgCtrl = TextEditingController();
   final _scrollCtrl = ScrollController();
   final _chatService = ChatService();
@@ -27,7 +30,9 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   void initState() {
     super.initState();
-    _addBotWelcome();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _restoreMessages();
+    });
   }
 
   void _addBotWelcome() {
@@ -41,6 +46,60 @@ class _ChatScreenState extends State<ChatScreen> {
       timestamp: DateTime.now(),
     ));
   }
+
+  Future<void> _restoreMessages() async {
+    final user = context.read<AppProvider>().user;
+    if (user == null) return;
+
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_storageKeyFor(user.uid));
+
+    if (raw == null || raw.isEmpty) {
+      setState(_addBotWelcome);
+      await _persistMessages();
+      return;
+    }
+
+    final decoded = (jsonDecode(raw) as List<dynamic>)
+        .map((item) => _chatMessageFromMap(Map<String, dynamic>.from(item)))
+        .toList();
+
+    if (!mounted) return;
+    setState(() {
+      _messages
+        ..clear()
+        ..addAll(decoded);
+    });
+    _chatService.restoreConversation(user, _messages);
+    _scrollToBottom();
+  }
+
+  Future<void> _persistMessages() async {
+    final user = context.read<AppProvider>().user;
+    if (user == null) return;
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(
+      _storageKeyFor(user.uid),
+      jsonEncode(_messages.map(_chatMessageToMap).toList()),
+    );
+  }
+
+  String _storageKeyFor(String uid) => '$_chatStorageKeyPrefix$uid';
+
+  Map<String, dynamic> _chatMessageToMap(ChatMessage message) => {
+        'id': message.id,
+        'text': message.text,
+        'isUser': message.isUser,
+        'timestamp': message.timestamp.toIso8601String(),
+      };
+
+  ChatMessage _chatMessageFromMap(Map<String, dynamic> map) => ChatMessage(
+        id: map['id'] ?? _uuid.v4(),
+        text: map['text'] ?? '',
+        isUser: map['isUser'] ?? false,
+        timestamp: DateTime.tryParse(map['timestamp'] ?? '') ?? DateTime.now(),
+      );
 
   Future<void> _sendMessage() async {
     final text = _msgCtrl.text.trim();
@@ -59,6 +118,7 @@ class _ChatScreenState extends State<ChatScreen> {
       ));
       _isBotTyping = true;
     });
+    await _persistMessages();
     _scrollToBottom();
 
     final reply = await _chatService.sendMessage(
@@ -79,6 +139,7 @@ class _ChatScreenState extends State<ChatScreen> {
         timestamp: DateTime.now(),
       ));
     });
+    await _persistMessages();
     _scrollToBottom();
   }
 

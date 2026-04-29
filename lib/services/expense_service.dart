@@ -11,27 +11,26 @@ class ExpenseService {
     return Expense.fromMap(expense.toMap(), doc.id);
   }
 
-  // NOTE: This query requires a Firestore composite index on (userId ASC, date DESC).
-  // If the app crashes on first run, check your debug logs for the Firebase Console
-  // index creation URL and tap it to auto-create the index.
   Stream<List<Expense>> watchUserExpenses(String userId) {
     return _expenses
         .where('userId', isEqualTo: userId)
-        .orderBy('date', descending: true)
         .snapshots()
-        .map((snap) => snap.docs
-            .map((d) => Expense.fromMap(d.data() as Map<String, dynamic>, d.id))
-            .toList());
+        .map((snap) {
+      final expenses = snap.docs
+          .map((d) => Expense.fromMap(d.data() as Map<String, dynamic>, d.id))
+          .toList();
+      expenses.sort((a, b) => b.date.compareTo(a.date));
+      return expenses;
+    });
   }
 
   Future<List<Expense>> getUserExpenses(String userId) async {
-    final snap = await _expenses
-        .where('userId', isEqualTo: userId)
-        .orderBy('date', descending: true)
-        .get();
-    return snap.docs
+    final snap = await _expenses.where('userId', isEqualTo: userId).get();
+    final expenses = snap.docs
         .map((d) => Expense.fromMap(d.data() as Map<String, dynamic>, d.id))
         .toList();
+    expenses.sort((a, b) => b.date.compareTo(a.date));
+    return expenses;
   }
 
   Future<Map<String, double>> getCategoryTotals(String userId) async {
