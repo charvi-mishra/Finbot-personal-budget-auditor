@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:country_picker/country_picker.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../services/auth_service.dart';
 import '../utils/theme.dart';
 import '../widgets/piggy_icon.dart';
 import 'signin_screen.dart';
+import 'verify_email_screen.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -49,8 +51,13 @@ class _SignUpScreenState extends State<SignUpScreen>
   void dispose() {
     _fadeCtrl.dispose();
     for (final c in [
-      _nameCtrl, _emailCtrl, _occupationCtrl, _incomeCtrl,
-      _savingsCtrl, _passCtrl, _rePassCtrl
+      _nameCtrl,
+      _emailCtrl,
+      _occupationCtrl,
+      _incomeCtrl,
+      _savingsCtrl,
+      _passCtrl,
+      _rePassCtrl
     ]) {
       c.dispose();
     }
@@ -75,9 +82,8 @@ class _SignUpScreenState extends State<SignUpScreen>
       if (!_isUnemployed && _incomeCtrl.text.isNotEmpty) {
         income = double.tryParse(_incomeCtrl.text);
       }
-      final savings = _savingsCtrl.text.isEmpty
-          ? null
-          : double.tryParse(_savingsCtrl.text);
+      final savings =
+          _savingsCtrl.text.isEmpty ? null : double.tryParse(_savingsCtrl.text);
 
       await _auth.signUp(
         name: _nameCtrl.text,
@@ -93,33 +99,44 @@ class _SignUpScreenState extends State<SignUpScreen>
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            '🎉 Account created successfully! Please sign in.',
+            'Account created! Please verify your email, then sign in.',
             style: GoogleFonts.nunito(fontWeight: FontWeight.w600),
           ),
           backgroundColor: AppTheme.secondary,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           duration: const Duration(seconds: 3),
         ),
       );
       Navigator.pushReplacement(
-          context, MaterialPageRoute(builder: (_) => const SignInScreen()));
+        context,
+        MaterialPageRoute(
+          builder: (_) => VerifyEmailScreen(email: _emailCtrl.text.trim()),
+        ),
+      );
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(e.toString()),
+            content: Text(_errorMessage(e)),
             backgroundColor: AppTheme.danger,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
         );
       }
     } finally {
       if (mounted) setState(() => _loading = false);
     }
+  }
+
+  String _errorMessage(Object error) {
+    if (error is FirebaseAuthException) {
+      return error.message ?? 'Authentication failed. Please try again.';
+    }
+    return error.toString().replaceFirst('Exception: ', '');
   }
 
   @override
@@ -218,7 +235,9 @@ class _SignUpScreenState extends State<SignUpScreen>
                         ],
                         validator: (v) {
                           if (_isUnemployed) return null;
-                          if (v!.isEmpty) return 'Please enter your monthly income';
+                          if (v!.isEmpty) {
+                            return 'Please enter your monthly income';
+                          }
                           return null;
                         },
                       ),
@@ -262,9 +281,7 @@ class _SignUpScreenState extends State<SignUpScreen>
                       obscure: _obscurePass,
                       onToggle: () =>
                           setState(() => _obscurePass = !_obscurePass),
-                      validator: (v) => v!.length < 6
-                          ? 'Password must be at least 6 characters'
-                          : null,
+                      validator: _validateStrongPassword,
                     ),
                     const SizedBox(height: 14),
                     _buildPasswordField(
@@ -330,6 +347,21 @@ class _SignUpScreenState extends State<SignUpScreen>
           letterSpacing: 1.2,
         ),
       );
+
+  String? _validateStrongPassword(String? value) {
+    final password = value ?? '';
+    final hasUppercase = RegExp(r'[A-Z]').hasMatch(password);
+    final hasLowercase = RegExp(r'[a-z]').hasMatch(password);
+    final hasNumberOrSymbol = RegExp(r'[\d\W_]').hasMatch(password);
+
+    if (password.length < 8) {
+      return 'Password must be at least 8 characters';
+    }
+    if (!hasUppercase || !hasLowercase || !hasNumberOrSymbol) {
+      return 'Use uppercase, lowercase, and a number or symbol';
+    }
+    return null;
+  }
 
   Widget _buildField({
     required TextEditingController controller,
@@ -412,7 +444,8 @@ class _SignUpScreenState extends State<SignUpScreen>
           ),
           child: Row(
             children: [
-              const Icon(Icons.flag_outlined, color: AppTheme.primary, size: 20),
+              const Icon(Icons.flag_outlined,
+                  color: AppTheme.primary, size: 20),
               const SizedBox(width: 12),
               Expanded(
                 child: Text(

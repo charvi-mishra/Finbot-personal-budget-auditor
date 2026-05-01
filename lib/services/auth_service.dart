@@ -35,10 +35,13 @@ class AuthService {
       createdAt: DateTime.now(),
     );
 
-    await _db
-        .collection('users')
-        .doc(cred.user!.uid)
-        .set(user.toMap());
+    await _db.collection('users').doc(cred.user!.uid).set(user.toMap());
+
+    try {
+      await cred.user!.sendEmailVerification();
+    } finally {
+      await _auth.signOut();
+    }
 
     return user;
   }
@@ -51,6 +54,24 @@ class AuthService {
       email: email.trim(),
       password: password,
     );
+
+    await cred.user!.reload();
+    final firebaseUser = _auth.currentUser ?? cred.user!;
+
+    if (!firebaseUser.emailVerified) {
+      try {
+        await firebaseUser.sendEmailVerification();
+      } catch (_) {
+        // Firebase may rate-limit repeated verification emails.
+      }
+      await _auth.signOut();
+      throw FirebaseAuthException(
+        code: 'email-not-verified',
+        message:
+            'Please verify your email before signing in. We sent a verification link to your inbox.',
+      );
+    }
+
     return getUser(cred.user!.uid);
   }
 

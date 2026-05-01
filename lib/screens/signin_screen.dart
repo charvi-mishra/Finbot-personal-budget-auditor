@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../services/auth_service.dart';
@@ -65,7 +66,7 @@ class _SignInScreenState extends State<SignInScreen>
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(e.toString()),
+            content: Text(_errorMessage(e)),
             backgroundColor: AppTheme.danger,
             behavior: SnackBarBehavior.floating,
             shape:
@@ -76,6 +77,13 @@ class _SignInScreenState extends State<SignInScreen>
     } finally {
       if (mounted) setState(() => _loading = false);
     }
+  }
+
+  String _errorMessage(Object error) {
+    if (error is FirebaseAuthException) {
+      return error.message ?? 'Authentication failed. Please try again.';
+    }
+    return error.toString().replaceFirst('Exception: ', '');
   }
 
   @override
@@ -130,9 +138,8 @@ class _SignInScreenState extends State<SignInScreen>
                             prefixIcon: const Icon(Icons.email_outlined,
                                 color: AppTheme.primary, size: 20),
                           ),
-                          validator: (v) => !v!.contains('@')
-                              ? 'Enter a valid email'
-                              : null,
+                          validator: (v) =>
+                              !v!.contains('@') ? 'Enter a valid email' : null,
                         ),
                         const SizedBox(height: 16),
                         TextFormField(

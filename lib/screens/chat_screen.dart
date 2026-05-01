@@ -193,7 +193,6 @@ class _ChatScreenState extends State<ChatScreen> {
                     Container(
                       width: 7,
                       height: 7,
-                      
                       decoration: const BoxDecoration(
                         color: AppTheme.success,
                         shape: BoxShape.circle,
@@ -216,12 +215,13 @@ class _ChatScreenState extends State<ChatScreen> {
             margin: const EdgeInsets.only(right: 16),
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
             decoration: BoxDecoration(
-              color: AppTheme.primary.withValues(alpha:0.1),
+              color: AppTheme.primary.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(20),
             ),
             child: Row(
               children: [
-                const Icon(Icons.auto_awesome, color: AppTheme.primary, size: 14),
+                const Icon(Icons.auto_awesome,
+                    color: AppTheme.primary, size: 14),
                 const SizedBox(width: 4),
                 Text('AI Powered',
                     style: GoogleFonts.nunito(
@@ -280,9 +280,9 @@ class _ChatScreenState extends State<ChatScreen> {
           margin: const EdgeInsets.only(right: 8),
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           decoration: BoxDecoration(
-            color: AppTheme.primary.withValues(alpha:0.08),
+            color: AppTheme.primary.withValues(alpha: 0.08),
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: AppTheme.primary.withValues(alpha:0.2)),
+            border: Border.all(color: AppTheme.primary.withValues(alpha: 0.2)),
           ),
           child: Text(
             text,
@@ -321,7 +321,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha:0.05),
+                    color: Colors.black.withValues(alpha: 0.05),
                     blurRadius: 8,
                     offset: const Offset(0, 2),
                   ),
@@ -356,7 +356,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 borderRadius: BorderRadius.circular(18),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha:0.05),
+                    color: Colors.black.withValues(alpha: 0.05),
                     blurRadius: 8,
                   ),
                 ],
@@ -381,7 +381,7 @@ class _ChatScreenState extends State<ChatScreen> {
           width: 8,
           height: 8,
           decoration: BoxDecoration(
-            color: AppTheme.primary.withValues(alpha:0.3 + v * 0.7),
+            color: AppTheme.primary.withValues(alpha: 0.3 + v * 0.7),
             shape: BoxShape.circle,
           ),
         ),
@@ -390,63 +390,59 @@ class _ChatScreenState extends State<ChatScreen> {
   Widget _inputBar() => SafeArea(
         top: false,
         child: Container(
-        padding: EdgeInsets.only(
-          left: 16,
-          right: 16,
-          top: 12,
-          bottom: MediaQuery.of(context).viewInsets.bottom,
-        ),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha:0.06),
-              blurRadius: 10,
-              offset: const Offset(0, -2),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              child: TextField(
-                controller: _msgCtrl,
-                style: GoogleFonts.nunito(fontSize: 14),
-                maxLines: null,
-                textCapitalization: TextCapitalization.sentences,
-                decoration: InputDecoration(
-                  hintText: 'Tell me what you spent...',
-                  hintStyle: GoogleFonts.nunito(
-                      fontSize: 14, color: AppTheme.textLight),
-                  contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 18, vertical: 4.2),
-                  filled: true,
-                  fillColor: const Color(0xFFF9FAFB),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(24),
-                    borderSide: BorderSide.none,
-                  ),
-                ),
-                onSubmitted: (_) => _sendMessage(),
+          padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.06),
+                blurRadius: 10,
+                offset: const Offset(0, -2),
               ),
-            ),
-            const SizedBox(width: 0.1),
-            GestureDetector(
-              onTap: _sendMessage,
-              child: Container(
-                width: 48,
-                height: 48,
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [AppTheme.primary, Color(0xFFFF8C5A)],
+            ],
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _msgCtrl,
+                  style: GoogleFonts.nunito(fontSize: 14),
+                  maxLines: null,
+                  textCapitalization: TextCapitalization.sentences,
+                  decoration: InputDecoration(
+                    hintText: 'Tell me what you spent...',
+                    hintStyle: GoogleFonts.nunito(
+                        fontSize: 14, color: AppTheme.textLight),
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 18, vertical: 4.2),
+                    filled: true,
+                    fillColor: const Color(0xFFF9FAFB),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(24),
+                      borderSide: BorderSide.none,
+                    ),
                   ),
-                  shape: BoxShape.circle,
+                  onSubmitted: (_) => _sendMessage(),
                 ),
-                child: const Icon(Icons.send_rounded,
-                    color: Colors.white, size: 20),
               ),
-            ),
-          ],
+              const SizedBox(width: 8),
+              GestureDetector(
+                onTap: _sendMessage,
+                child: Container(
+                  width: 48,
+                  height: 48,
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [AppTheme.primary, Color(0xFFFF8C5A)],
+                    ),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.send_rounded,
+                      color: Colors.white, size: 20),
+                ),
+              ),
+            ],
+          ),
         ),
-      ));
+      );
 }

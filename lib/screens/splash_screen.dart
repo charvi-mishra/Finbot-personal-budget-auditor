@@ -40,15 +40,29 @@ class _SplashScreenState extends State<SplashScreen>
     final firebaseUser = FirebaseAuth.instance.currentUser;
     if (!mounted) return;
 
+    final appProvider = context.read<AppProvider>();
+    final navigator = Navigator.of(context);
+
     if (firebaseUser != null) {
-      await context.read<AppProvider>().loadUser(firebaseUser.uid);
-      if (mounted) {
-        Navigator.pushReplacement(
-            context, MaterialPageRoute(builder: (_) => const HomeScreen()));
+      await firebaseUser.reload();
+      final refreshedUser = FirebaseAuth.instance.currentUser;
+
+      if (refreshedUser == null || !refreshedUser.emailVerified) {
+        await FirebaseAuth.instance.signOut();
+        if (!mounted) return;
+        appProvider.clearUser();
+        navigator.pushReplacement(
+            MaterialPageRoute(builder: (_) => const SignInScreen()));
+        return;
       }
+
+      await appProvider.loadUser(refreshedUser.uid);
+      if (!mounted) return;
+      navigator.pushReplacement(
+          MaterialPageRoute(builder: (_) => const HomeScreen()));
     } else {
-      Navigator.pushReplacement(
-          context, MaterialPageRoute(builder: (_) => const SignInScreen()));
+      navigator.pushReplacement(
+          MaterialPageRoute(builder: (_) => const SignInScreen()));
     }
   }
 
