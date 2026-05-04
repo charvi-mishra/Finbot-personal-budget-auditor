@@ -6,6 +6,7 @@ class UserModel {
   final String occupation;
   final double? monthlyIncome;
   final double? currentSavings;
+  final bool isDisabled;
   final DateTime createdAt;
 
   UserModel({
@@ -16,6 +17,7 @@ class UserModel {
     required this.occupation,
     this.monthlyIncome,
     this.currentSavings,
+    this.isDisabled = false,
     required this.createdAt,
   });
 
@@ -34,6 +36,7 @@ class UserModel {
       occupation: map['occupation'] ?? '',
       monthlyIncome: (map['monthlyIncome'] as num?)?.toDouble(),
       currentSavings: (map['currentSavings'] as num?)?.toDouble(),
+      isDisabled: map['isDisabled'] ?? false,
       createdAt: DateTime.tryParse(map['createdAt'] ?? '') ?? DateTime.now(),
     );
   }
@@ -45,12 +48,14 @@ class UserModel {
         'occupation': occupation,
         'monthlyIncome': monthlyIncome,
         'currentSavings': currentSavings,
+        'isDisabled': isDisabled,
         'createdAt': createdAt.toIso8601String(),
       };
 
   UserModel copyWith({
     double? currentSavings,
     double? monthlyIncome,
+    bool? isDisabled,
   }) =>
       UserModel(
         uid: uid,
@@ -60,6 +65,7 @@ class UserModel {
         occupation: occupation,
         monthlyIncome: monthlyIncome ?? this.monthlyIncome,
         currentSavings: currentSavings ?? this.currentSavings,
+        isDisabled: isDisabled ?? this.isDisabled,
         createdAt: createdAt,
       );
 }

@@ -34,6 +34,45 @@ class AppProvider extends ChangeNotifier {
     return _user!.currentSavings ?? 0;
   }
 
+  double _savingsImpact(Expense expense) =>
+      expense.isExpense ? -expense.amount : expense.amount;
+
+  double _roundSavings(double amount) =>
+      double.parse(amount.toStringAsFixed(3));
+
+  Future<void> updateExpense(
+    Expense oldExpense,
+    Expense updatedExpense, {
+    required bool reflectInSavings,
+  }) async {
+    await _expenseService.updateExpense(updatedExpense);
+
+    if (reflectInSavings && _user != null) {
+      final delta = _savingsImpact(updatedExpense) - _savingsImpact(oldExpense);
+      final nextSavings = _roundSavings(
+        (currentSavings + delta).clamp(0, double.infinity).toDouble(),
+      );
+      await _authService.updateSavings(_user!.uid, nextSavings);
+      await refreshUser();
+    }
+  }
+
+  Future<void> deleteExpense(
+    Expense expense, {
+    required bool reflectInSavings,
+  }) async {
+    await _expenseService.deleteExpense(expense.id);
+
+    if (reflectInSavings && _user != null) {
+      final delta = -_savingsImpact(expense);
+      final nextSavings = _roundSavings(
+        (currentSavings + delta).clamp(0, double.infinity).toDouble(),
+      );
+      await _authService.updateSavings(_user!.uid, nextSavings);
+      await refreshUser();
+    }
+  }
+
   Future<void> loadUser(String uid) async {
     _loading = true;
     notifyListeners();
@@ -54,6 +93,29 @@ class AppProvider extends ChangeNotifier {
     if (_user == null) return;
     _user = await _authService.getUser(_user!.uid);
     notifyListeners();
+  }
+
+  Future<void> updateMonthlyIncome(double monthlyIncome) async {
+    if (_user == null) return;
+    await _authService.updateMonthlyIncome(_user!.uid, monthlyIncome);
+    _user = _user!.copyWith(monthlyIncome: monthlyIncome);
+    notifyListeners();
+  }
+
+  Future<void> disableAccount() async {
+    if (_user == null) return;
+    await _authService.disableAccount(_user!.uid);
+    clearUser();
+  }
+
+Future<void> reEnableAccount(String uid) async {
+  await _authService.reEnableAccount(uid);
+  await refreshUser();
+}
+
+  Future<void> deleteAccount() async {
+    await _authService.deleteCurrentAccount();
+    clearUser();
   }
 
   void setUser(UserModel user) {

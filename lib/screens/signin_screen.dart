@@ -48,36 +48,98 @@ class _SignInScreenState extends State<SignInScreen>
     super.dispose();
   }
 
-  Future<void> _signIn() async {
-    if (!_formKey.currentState!.validate()) return;
-    setState(() => _loading = true);
-    try {
-      final user = await _auth.signIn(
-        email: _emailCtrl.text,
-        password: _passCtrl.text,
-      );
-      if (!mounted) return;
-      if (user != null) {
-        context.read<AppProvider>().setUser(user);
-        Navigator.pushReplacement(
-            context, MaterialPageRoute(builder: (_) => const HomeScreen()));
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(_errorMessage(e)),
-            backgroundColor: AppTheme.danger,
-            behavior: SnackBarBehavior.floating,
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          ),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _loading = false);
+  Future<void> _signIn({bool reEnableIfDisabled = false}) async {
+  if (!_formKey.currentState!.validate()) return;
+  setState(() => _loading = true);
+  try {
+    final user = await _auth.signIn(
+      email: _emailCtrl.text,
+      password: _passCtrl.text,
+      reEnableIfDisabled: reEnableIfDisabled,
+    );
+    if (!mounted) return;
+    if (user != null) {
+      context.read<AppProvider>().setUser(user);
+      Navigator.pushReplacement(
+          context, MaterialPageRoute(builder: (_) => const HomeScreen()));
     }
+  } on FirebaseAuthException catch (e) {
+    if (!mounted) return;
+    if (e.code == 'account-disabled') {
+      setState(() => _loading = false);
+      _showReEnableDialog();
+      return;
+    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(_errorMessage(e)),
+        backgroundColor: AppTheme.danger,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+    );
+  } catch (e) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(_errorMessage(e)),
+          backgroundColor: AppTheme.danger,
+          behavior: SnackBarBehavior.floating,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      );
+    }
+  } finally {
+    if (mounted) setState(() => _loading = false);
   }
+}
+
+void _showReEnableDialog() {
+  showDialog(
+    context: context,
+    barrierDismissible: false,
+    builder: (ctx) => AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      title: Row(
+        children: [
+          const Text('2xl', style: TextStyle(fontSize: 22)),
+          const SizedBox(width: 8),
+          Text(
+            'Account Disabled',
+            style: GoogleFonts.nunito(
+              fontWeight: FontWeight.w800,
+              color: AppTheme.primary,
+            ),
+          ),
+        ],
+      ),
+      content: Text(
+        'This account was previously disabled. Would you like to reactivate it?',
+        style: GoogleFonts.nunito(color: AppTheme.textMid, fontSize: 14),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(ctx),
+          child: Text(
+            'Cancel',
+            style: GoogleFonts.nunito(color: AppTheme.textMid),
+          ),
+        ),
+        ElevatedButton(
+          onPressed: () {
+            Navigator.pop(ctx);
+            _signIn(reEnableIfDisabled: true);
+          },
+          child: Text(
+            'Reactivate 🐷',
+            style: GoogleFonts.nunito(fontWeight: FontWeight.w700),
+          ),
+        ),
+      ],
+    ),
+  );
+}
 
   String _errorMessage(Object error) {
     if (error is FirebaseAuthException) {

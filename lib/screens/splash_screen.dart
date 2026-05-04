@@ -58,6 +58,14 @@ class _SplashScreenState extends State<SplashScreen>
 
       await appProvider.loadUser(refreshedUser.uid);
       if (!mounted) return;
+      if (appProvider.user?.isDisabled ?? false) {
+        await FirebaseAuth.instance.signOut();
+        if (!mounted) return;
+        appProvider.clearUser();
+        navigator.pushReplacement(
+            MaterialPageRoute(builder: (_) => const SignInScreen()));
+        return;
+      }
       navigator.pushReplacement(
           MaterialPageRoute(builder: (_) => const HomeScreen()));
     } else {

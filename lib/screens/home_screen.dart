@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
@@ -38,14 +39,25 @@ class _HomeScreenState extends State<HomeScreen>
     super.dispose();
   }
 
-  String _formatCurrency(double amount, String? country) {
+  String _formatCurrency(
+    double amount,
+    String? country, {
+    int decimalPlaces = 0,
+  }) {
     final symbol = _getCurrencySymbol(country ?? 'India');
-    if (amount >= 100000) {
-      return '$symbol${(amount / 100000).toStringAsFixed(2)}L';
-    } else if (amount >= 1000) {
-      return '$symbol${(amount / 1000).toStringAsFixed(1)}K';
+    String formatNumber(double value) {
+      if (decimalPlaces == 0) return value.toStringAsFixed(0);
+      return value
+          .toStringAsFixed(decimalPlaces)
+          .replaceFirst(RegExp(r'\.?0+$'), '');
     }
-    return '$symbol${amount.toStringAsFixed(0)}';
+
+    if (amount >= 100000) {
+      return '$symbol${formatNumber(amount / 100000)}L';
+    } else if (amount >= 1000) {
+      return '$symbol${formatNumber(amount / 1000)}K';
+    }
+    return '$symbol${formatNumber(amount)}';
   }
 
   String _getCurrencySymbol(String country) {
@@ -88,19 +100,84 @@ class _HomeScreenState extends State<HomeScreen>
                 backgroundColor: AppTheme.primary,
                 actions: [
                   IconButton(
-                    onPressed: () async {
-                      await _auth.signOut();
-                      provider.clearUser();
-                      if (context.mounted) {
-                        Navigator.pushReplacement(
-                          context,
-                          MaterialPageRoute(
-                              builder: (_) => const SignInScreen()),
-                        );
+                    tooltip: 'Update salary',
+                    onPressed: () =>
+                        _showUpdateSalaryDialog(context, provider),
+                    icon: const Icon(
+                      Icons.payments_outlined,
+                      color: Colors.white70,
+                      size: 22,
+                    ),
+                  ),
+                  PopupMenuButton<String>(
+                    tooltip: 'Account',
+                    icon: const Icon(
+                      Icons.account_circle_outlined,
+                      color: Colors.white70,
+                      size: 24,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    onSelected: (value) {
+                      if (value == 'logout') {
+                        _logout(provider);
+                      } else if (value == 'disable') {
+                        _disableAccount(provider);
+                      } else if (value == 'delete') {
+                        _deleteAccount(provider);
                       }
                     },
-                    icon: const Icon(Icons.logout_rounded,
-                        color: Colors.white70, size: 22),
+                    itemBuilder: (context) => [
+                      PopupMenuItem(
+                        value: 'logout',
+                        child: Row(
+                          children: [
+                            const Icon(Icons.logout_rounded, size: 18),
+                            const SizedBox(width: 10),
+                            Text(
+                              'Logout',
+                              style: GoogleFonts.nunito(
+                                  fontWeight: FontWeight.w700),
+                            ),
+                          ],
+                        ),
+                      ),
+                      PopupMenuItem(
+                        value: 'disable',
+                        child: Row(
+                          children: [
+                            const Icon(Icons.block_rounded, size: 18),
+                            const SizedBox(width: 10),
+                            Text(
+                              'Disable account',
+                              style: GoogleFonts.nunito(
+                                  fontWeight: FontWeight.w700),
+                            ),
+                          ],
+                        ),
+                      ),
+                      PopupMenuItem(
+                        value: 'delete',
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.delete_forever_outlined,
+                              size: 18,
+                              color: AppTheme.danger,
+                            ),
+                            const SizedBox(width: 10),
+                            Text(
+                              'Delete account',
+                              style: GoogleFonts.nunito(
+                                fontWeight: FontWeight.w700,
+                                color: AppTheme.danger,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
                 ],
                 flexibleSpace: FlexibleSpaceBar(
@@ -195,7 +272,8 @@ class _HomeScreenState extends State<HomeScreen>
                                           'Savings',
                                           _formatCurrency(
                                               currentSavings,
-                                              user?.country),
+                                              user?.country,
+                                              decimalPlaces: 3),
                                           Icons.savings_rounded,
                                         ),
                                       ),
@@ -267,7 +345,9 @@ class _HomeScreenState extends State<HomeScreen>
                         const SizedBox(height: 14),
                         ...expenses
                             .take(10)
-                            .map((e) => _transactionTile(e, currSymbol)),
+                            .map(
+                              (e) => _transactionTile(e, currSymbol, provider),
+                            ),
                       ],
                     ],
                   ),
@@ -329,6 +409,184 @@ class _HomeScreenState extends State<HomeScreen>
           ),
         ],
       );
+
+  void _goToSignIn() {
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (_) => const SignInScreen()),
+    );
+  }
+
+  Future<void> _logout(AppProvider provider) async {
+    await _auth.signOut();
+    provider.clearUser();
+    if (!mounted) return;
+    _goToSignIn();
+  }
+
+  Future<bool> _confirmAccountAction({
+    required String title,
+    required String message,
+    required String actionLabel,
+    bool danger = false,
+  }) async {
+    return await showDialog<bool>(
+          context: context,
+          builder: (dialogContext) => AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            title: Text(
+              title,
+              style: GoogleFonts.nunito(
+                fontWeight: FontWeight.w800,
+                color: AppTheme.textDark,
+              ),
+            ),
+            content: Text(
+              message,
+              style: GoogleFonts.nunito(color: AppTheme.textMid),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(false),
+                child: Text(
+                  'Cancel',
+                  style: GoogleFonts.nunito(fontWeight: FontWeight.w700),
+                ),
+              ),
+              ElevatedButton(
+                style: danger
+                    ? ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.danger,
+                      )
+                    : null,
+                onPressed: () => Navigator.of(dialogContext).pop(true),
+                child: Text(actionLabel),
+              ),
+            ],
+          ),
+        ) ??
+        false;
+  }
+
+  Future<void> _disableAccount(AppProvider provider) async {
+    final confirmed = await _confirmAccountAction(
+      title: 'Disable Account?',
+      message:
+          'You will be signed out and this account will be blocked from signing in again.',
+      actionLabel: 'Disable',
+      danger: true,
+    );
+    if (!confirmed || !mounted) return;
+
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await provider.disableAccount();
+      if (!mounted) return;
+      _goToSignIn();
+    } catch (_) {
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            'Could not disable account. Please try again.',
+            style: GoogleFonts.nunito(fontWeight: FontWeight.w600),
+          ),
+          backgroundColor: AppTheme.danger,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+      );
+    }
+  }
+
+  Future<void> _deleteAccount(AppProvider provider) async {
+    final confirmed = await _confirmAccountAction(
+      title: 'Delete Account?',
+      message:
+          'This permanently deletes your account and saved transactions. You may need to sign in again first if Firebase requires recent login.',
+      actionLabel: 'Delete',
+      danger: true,
+    );
+    if (!confirmed || !mounted) return;
+
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await provider.deleteAccount();
+      if (!mounted) return;
+      _goToSignIn();
+    } catch (_) {
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            'Could not delete account. Sign in again, then try once more.',
+            style: GoogleFonts.nunito(fontWeight: FontWeight.w600),
+          ),
+          backgroundColor: AppTheme.danger,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+      );
+    }
+  }
+
+  Future<void> _showUpdateSalaryDialog(
+    BuildContext context,
+    AppProvider provider,
+  ) async {
+    final user = provider.user;
+    if (user == null) return;
+
+    final messenger = ScaffoldMessenger.of(context);
+    final salary = await showDialog<double>(
+      context: context,
+      builder: (_) => _UpdateSalaryDialog(
+        initialSalary: user.monthlyIncome,
+        currencySymbol: _getCurrencySymbol(user.country),
+      ),
+    );
+
+    if (salary == null || !mounted) return;
+
+    try {
+      await provider.updateMonthlyIncome(salary);
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            'Salary updated',
+            style: GoogleFonts.nunito(fontWeight: FontWeight.w600),
+          ),
+          backgroundColor: AppTheme.success,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            'Could not update salary. Please try again.',
+            style: GoogleFonts.nunito(fontWeight: FontWeight.w600),
+          ),
+          backgroundColor: AppTheme.danger,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+      );
+    }
+  }
 
   Widget _sectionTitle(String title) => Text(
         title,
@@ -454,7 +712,8 @@ class _HomeScreenState extends State<HomeScreen>
       itemCount: entries.length,
       itemBuilder: (ctx, i) {
         final entry = entries[i];
-        final color = AppTheme.categoryColors[i % AppTheme.categoryColors.length];
+        final color =
+            AppTheme.categoryColors[i % AppTheme.categoryColors.length];
         final pct = total > 0 ? entry.value / total : 0.0;
 
         // Find the emoji for this category
@@ -550,7 +809,174 @@ class _HomeScreenState extends State<HomeScreen>
     );
   }
 
-  Widget _transactionTile(Expense expense, String symbol) {
+  Future<bool?> _askReflectInSavings({
+    required String title,
+    required String message,
+    required String plainAction,
+    required String savingsAction,
+  }) {
+    return showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        title: Text(
+          title,
+          style: GoogleFonts.nunito(
+            fontWeight: FontWeight.w800,
+            color: AppTheme.textDark,
+          ),
+        ),
+        content: Text(
+          message,
+          style: GoogleFonts.nunito(color: AppTheme.textMid),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: Text(
+              'Cancel',
+              style: GoogleFonts.nunito(fontWeight: FontWeight.w700),
+            ),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(
+              plainAction,
+              style: GoogleFonts.nunito(fontWeight: FontWeight.w700),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text(
+              savingsAction,
+              style: GoogleFonts.nunito(fontWeight: FontWeight.w700),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _showEditTransactionDialog(
+    Expense expense,
+    AppProvider provider,
+  ) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final updatedExpense = await showDialog<Expense>(
+      context: context,
+      builder: (_) => _EditTransactionDialog(expense: expense),
+    );
+
+    if (updatedExpense == null || !mounted) return;
+
+    final reflectInSavings = await _askReflectInSavings(
+      title: 'Update Savings?',
+      message: 'Should this edit also adjust your current savings?',
+      plainAction: 'Only transaction',
+      savingsAction: 'Update savings',
+    );
+    if (reflectInSavings == null || !mounted) return;
+
+    try {
+      await provider.updateExpense(
+        expense,
+        updatedExpense,
+        reflectInSavings: reflectInSavings,
+      );
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            reflectInSavings
+                ? 'Transaction and savings updated'
+                : 'Transaction updated',
+            style: GoogleFonts.nunito(fontWeight: FontWeight.w600),
+          ),
+          backgroundColor: AppTheme.success,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            'Could not update transaction. Please try again.',
+            style: GoogleFonts.nunito(fontWeight: FontWeight.w600),
+          ),
+          backgroundColor: AppTheme.danger,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+      );
+    }
+  }
+
+  Future<void> _deleteTransaction(
+    Expense expense,
+    AppProvider provider,
+  ) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final reflectInSavings = await _askReflectInSavings(
+      title: 'Delete Transaction?',
+      message:
+          'Should deleting this transaction also adjust your current savings?',
+      plainAction: 'Only delete',
+      savingsAction: 'Delete and update',
+    );
+    if (reflectInSavings == null || !mounted) return;
+
+    try {
+      await provider.deleteExpense(
+        expense,
+        reflectInSavings: reflectInSavings,
+      );
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            reflectInSavings
+                ? 'Transaction deleted and savings updated'
+                : 'Transaction deleted',
+            style: GoogleFonts.nunito(fontWeight: FontWeight.w600),
+          ),
+          backgroundColor: AppTheme.success,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            'Could not delete transaction. Please try again.',
+            style: GoogleFonts.nunito(fontWeight: FontWeight.w600),
+          ),
+          backgroundColor: AppTheme.danger,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+      );
+    }
+  }
+
+  Widget _transactionTile(
+    Expense expense,
+    String symbol,
+    AppProvider provider,
+  ) {
     final amountColor = expense.isExpense ? AppTheme.danger : AppTheme.success;
     final amountPrefix = expense.isExpense ? '-' : '+';
 
@@ -624,6 +1050,55 @@ class _HomeScreenState extends State<HomeScreen>
               color: amountColor,
             ),
           ),
+          const SizedBox(width: 4),
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.more_vert_rounded, color: AppTheme.textMid),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            onSelected: (value) {
+              if (value == 'edit') {
+                _showEditTransactionDialog(expense, provider);
+              } else if (value == 'delete') {
+                _deleteTransaction(expense, provider);
+              }
+            },
+            itemBuilder: (context) => [
+              PopupMenuItem(
+                value: 'edit',
+                child: Row(
+                  children: [
+                    const Icon(Icons.edit_rounded, size: 18),
+                    const SizedBox(width: 10),
+                    Text(
+                      'Edit',
+                      style: GoogleFonts.nunito(fontWeight: FontWeight.w700),
+                    ),
+                  ],
+                ),
+              ),
+              PopupMenuItem(
+                value: 'delete',
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.delete_outline_rounded,
+                      size: 18,
+                      color: AppTheme.danger,
+                    ),
+                    const SizedBox(width: 10),
+                    Text(
+                      'Delete',
+                      style: GoogleFonts.nunito(
+                        fontWeight: FontWeight.w700,
+                        color: AppTheme.danger,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     );
@@ -675,4 +1150,322 @@ class _HomeScreenState extends State<HomeScreen>
           ],
         ),
       );
+}
+
+class _UpdateSalaryDialog extends StatefulWidget {
+  const _UpdateSalaryDialog({
+    required this.initialSalary,
+    required this.currencySymbol,
+  });
+
+  final double? initialSalary;
+  final String currencySymbol;
+
+  @override
+  State<_UpdateSalaryDialog> createState() => _UpdateSalaryDialogState();
+}
+
+class _UpdateSalaryDialogState extends State<_UpdateSalaryDialog> {
+  final _formKey = GlobalKey<FormState>();
+  late final TextEditingController _salaryCtrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _salaryCtrl = TextEditingController(
+      text: widget.initialSalary?.toStringAsFixed(0) ?? '',
+    );
+  }
+
+  @override
+  void dispose() {
+    _salaryCtrl.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    if (!_formKey.currentState!.validate()) return;
+    Navigator.of(context).pop(double.parse(_salaryCtrl.text.trim()));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+      ),
+      title: Text(
+        'Update Salary',
+        style: GoogleFonts.nunito(
+          fontWeight: FontWeight.w800,
+          color: AppTheme.textDark,
+        ),
+      ),
+      content: Form(
+        key: _formKey,
+        child: TextFormField(
+          controller: _salaryCtrl,
+          autofocus: true,
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          inputFormatters: [
+            FilteringTextInputFormatter.allow(
+              RegExp(r'^\d+\.?\d{0,2}'),
+            ),
+          ],
+          style: GoogleFonts.nunito(fontSize: 15),
+          decoration: InputDecoration(
+            labelText: 'Monthly Salary',
+            prefixText: widget.currencySymbol,
+            prefixIcon: const Icon(
+              Icons.account_balance_wallet_outlined,
+              color: AppTheme.primary,
+              size: 20,
+            ),
+          ),
+          validator: (value) {
+            final salary = double.tryParse(value?.trim() ?? '');
+            if (salary == null) return 'Enter your monthly salary';
+            if (salary < 0) return 'Salary cannot be negative';
+            return null;
+          },
+          onFieldSubmitted: (_) => _submit(),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(
+            'Cancel',
+            style: GoogleFonts.nunito(fontWeight: FontWeight.w700),
+          ),
+        ),
+        ElevatedButton(
+          onPressed: _submit,
+          child: const Text('Save'),
+        ),
+      ],
+    );
+  }
+}
+
+class _EditTransactionDialog extends StatefulWidget {
+  const _EditTransactionDialog({required this.expense});
+
+  final Expense expense;
+
+  @override
+  State<_EditTransactionDialog> createState() => _EditTransactionDialogState();
+}
+
+class _EditTransactionDialogState extends State<_EditTransactionDialog> {
+  static const _expenseCategories = [
+    'Food',
+    'Groceries',
+    'Clothing',
+    'Transport',
+    'Entertainment',
+    'Health',
+    'Education',
+    'Utilities',
+    'Rent',
+    'Shopping',
+    'Coffee',
+    'Fuel',
+    'Gym',
+    'Subscriptions',
+    'Electronics',
+    'Gifts',
+    'Other',
+  ];
+
+  final _formKey = GlobalKey<FormState>();
+  late final TextEditingController _amountCtrl;
+  late final TextEditingController _descriptionCtrl;
+  late String _selectedCategory;
+  late DateTime _selectedDate;
+  late bool _isExpense;
+
+  @override
+  void initState() {
+    super.initState();
+    final expense = widget.expense;
+    _amountCtrl = TextEditingController(
+      text: expense.amount.toStringAsFixed(
+        expense.amount.truncateToDouble() == expense.amount ? 0 : 2,
+      ),
+    );
+    _descriptionCtrl = TextEditingController(text: expense.description);
+    _isExpense = expense.isExpense;
+    _selectedDate = expense.date;
+    _selectedCategory = _initialCategory(expense);
+  }
+
+  @override
+  void dispose() {
+    _amountCtrl.dispose();
+    _descriptionCtrl.dispose();
+    super.dispose();
+  }
+
+  String _initialCategory(Expense expense) {
+    if (!expense.isExpense) return 'Income';
+    return _expenseCategories.contains(expense.category)
+        ? expense.category
+        : 'Other';
+  }
+
+  void _submit() {
+    if (!_formKey.currentState!.validate()) return;
+
+    final expense = widget.expense;
+    Navigator.of(context).pop(
+      Expense(
+        id: expense.id,
+        userId: expense.userId,
+        amount: double.parse(_amountCtrl.text.trim()),
+        currency: expense.currency,
+        category: _isExpense ? _selectedCategory : 'Income',
+        description: _descriptionCtrl.text.trim(),
+        date: _selectedDate,
+        rawMessage: expense.rawMessage,
+        isExpense: _isExpense,
+      ),
+    );
+  }
+
+  Future<void> _pickDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate,
+      firstDate: DateTime(2000),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
+    );
+    if (picked == null || !mounted) return;
+    setState(() => _selectedDate = picked);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final categories = _isExpense ? _expenseCategories : const ['Income'];
+
+    return AlertDialog(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+      ),
+      title: Text(
+        'Edit Transaction',
+        style: GoogleFonts.nunito(
+          fontWeight: FontWeight.w800,
+          color: AppTheme.textDark,
+        ),
+      ),
+      content: Form(
+        key: _formKey,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SegmentedButton<bool>(
+                segments: const [
+                  ButtonSegment(
+                    value: true,
+                    icon: Icon(Icons.trending_down_rounded),
+                    label: Text('Expense'),
+                  ),
+                  ButtonSegment(
+                    value: false,
+                    icon: Icon(Icons.trending_up_rounded),
+                    label: Text('Income'),
+                  ),
+                ],
+                selected: {_isExpense},
+                onSelectionChanged: (selection) {
+                  setState(() {
+                    _isExpense = selection.first;
+                    _selectedCategory = _isExpense ? 'Other' : 'Income';
+                  });
+                },
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _amountCtrl,
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(
+                    RegExp(r'^\d+\.?\d{0,2}'),
+                  ),
+                ],
+                style: GoogleFonts.nunito(fontSize: 15),
+                decoration: const InputDecoration(
+                  labelText: 'Amount',
+                  prefixIcon: Icon(Icons.payments_outlined),
+                ),
+                validator: (value) {
+                  final amount = double.tryParse(value?.trim() ?? '');
+                  if (amount == null || amount <= 0) {
+                    return 'Enter a valid amount';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<String>(
+                value: _selectedCategory,
+                decoration: const InputDecoration(
+                  labelText: 'Category',
+                  prefixIcon: Icon(Icons.category_outlined),
+                ),
+                items: categories
+                    .map(
+                      (category) => DropdownMenuItem(
+                        value: category,
+                        child: Text(category),
+                      ),
+                    )
+                    .toList(),
+                onChanged: (value) {
+                  if (value == null) return;
+                  setState(() => _selectedCategory = value);
+                },
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _descriptionCtrl,
+                style: GoogleFonts.nunito(fontSize: 15),
+                decoration: const InputDecoration(
+                  labelText: 'Description',
+                  prefixIcon: Icon(Icons.notes_rounded),
+                ),
+              ),
+              const SizedBox(height: 12),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.calendar_month_rounded),
+                title: Text(
+                  DateFormat('d MMM, yyyy').format(_selectedDate),
+                  style: GoogleFonts.nunito(fontWeight: FontWeight.w700),
+                ),
+                trailing: const Icon(Icons.edit_calendar_rounded),
+                onTap: _pickDate,
+              ),
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(
+            'Cancel',
+            style: GoogleFonts.nunito(fontWeight: FontWeight.w700),
+          ),
+        ),
+        ElevatedButton(
+          onPressed: _submit,
+          child: const Text('Save'),
+        ),
+      ],
+    );
+  }
 }

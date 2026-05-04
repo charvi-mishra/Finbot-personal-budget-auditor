@@ -48,7 +48,8 @@ class AuthService {
 
   Future<UserModel?> signIn({
     required String email,
-    required String password,
+    required String password, 
+    bool? reEnableIfDisabled,
   }) async {
     final cred = await _auth.signInWithEmailAndPassword(
       email: email.trim(),
@@ -72,8 +73,30 @@ class AuthService {
       );
     }
 
-    return getUser(cred.user!.uid);
+    if (reEnableIfDisabled == true) {
+      await reEnableAccount(cred.user!.uid);
+    }
+
+    final user = await getUser(cred.user!.uid);
+    if (user?.isDisabled ?? false) {
+      await _auth.signOut();
+      throw FirebaseAuthException(
+        code: 'account-disabled',
+        message: 'This account is disabled.',
+      );
+    }
+
+    await reEnableAccount(cred.user!.uid);
+    return await getUser(cred.user!.uid);
   }
+
+  Future<void> reEnableAccount(String uid) async {
+  await _db.collection('users').doc(uid).update({
+    'isDisabled': false,
+    'disabledAt': FieldValue.delete(),
+    'reEnabledAt': FieldValue.serverTimestamp(),
+  });
+}
 
   Future<UserModel?> getUser(String uid) async {
     final doc = await _db.collection('users').doc(uid).get();
@@ -85,6 +108,45 @@ class AuthService {
     await _db.collection('users').doc(uid).update({
       'currentSavings': newSavings,
     });
+  }
+
+  Future<void> updateMonthlyIncome(String uid, double monthlyIncome) async {
+    await _db.collection('users').doc(uid).update({
+      'monthlyIncome': monthlyIncome,
+    });
+  }
+
+  Future<void> disableAccount(String uid) async {
+    await _db.collection('users').doc(uid).update({
+      'isDisabled': true,
+      'disabledAt': FieldValue.serverTimestamp(),
+    });
+    await _auth.signOut();
+  }
+
+  Future<void> deleteCurrentAccount() async {
+    final user = _auth.currentUser;
+    if (user == null) return;
+    final lastSignIn = user.metadata.lastSignInTime;
+    final signedInRecently = lastSignIn != null &&
+        DateTime.now().difference(lastSignIn) < const Duration(minutes: 2);
+
+    if (!signedInRecently) {
+      throw FirebaseAuthException(
+        code: 'requires-recent-login',
+        message: 'Please sign in again before deleting your account.',
+      );
+    }
+
+    final batch = _db.batch();
+    final expenses =
+        await _db.collection('expenses').where('userId', isEqualTo: user.uid).get();
+    for (final doc in expenses.docs) {
+      batch.delete(doc.reference);
+    }
+    batch.delete(_db.collection('users').doc(user.uid));
+    await batch.commit();
+    await user.delete();
   }
 
   Future<void> signOut() async => _auth.signOut();

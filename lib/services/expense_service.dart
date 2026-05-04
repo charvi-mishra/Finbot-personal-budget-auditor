@@ -11,11 +11,16 @@ class ExpenseService {
     return Expense.fromMap(expense.toMap(), doc.id);
   }
 
+  Future<void> updateExpense(Expense expense) async {
+    await _expenses.doc(expense.id).update(expense.toMap());
+  }
+
+  Future<void> deleteExpense(String expenseId) async {
+    await _expenses.doc(expenseId).delete();
+  }
+
   Stream<List<Expense>> watchUserExpenses(String userId) {
-    return _expenses
-        .where('userId', isEqualTo: userId)
-        .snapshots()
-        .map((snap) {
+    return _expenses.where('userId', isEqualTo: userId).snapshots().map((snap) {
       final expenses = snap.docs
           .map((d) => Expense.fromMap(d.data() as Map<String, dynamic>, d.id))
           .toList();
