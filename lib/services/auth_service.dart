@@ -86,16 +86,16 @@ class AuthService {
       );
     }
 
-    await reEnableAccount(cred.user!.uid);
+    //await reEnableAccount(cred.user!.uid);
     return await getUser(cred.user!.uid);
   }
 
   Future<void> reEnableAccount(String uid) async {
-  await _db.collection('users').doc(uid).update({
-    'isDisabled': false,
-    'disabledAt': FieldValue.delete(),
-    'reEnabledAt': FieldValue.serverTimestamp(),
-  });
+ await _db.collection('users').doc(uid).set({
+  'isDisabled': false,
+  'disabledAt': FieldValue.delete(),
+  'reEnabledAt': FieldValue.serverTimestamp(),
+}, SetOptions(merge: true));
 }
 
   Future<UserModel?> getUser(String uid) async {
