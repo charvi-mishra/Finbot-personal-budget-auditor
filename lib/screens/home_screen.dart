@@ -42,14 +42,11 @@ class _HomeScreenState extends State<HomeScreen>
   String _formatCurrency(
     double amount,
     String? country, {
-    int decimalPlaces = 0,
+    int decimalPlaces = 2,
   }) {
     final symbol = _getCurrencySymbol(country ?? 'India');
     String formatNumber(double value) {
-      if (decimalPlaces == 0) return value.toStringAsFixed(0);
-      return value
-          .toStringAsFixed(decimalPlaces)
-          .replaceFirst(RegExp(r'\.?0+$'), '');
+      return value.toStringAsFixed(decimalPlaces);
     }
 
     if (amount >= 100000) {
@@ -678,7 +675,7 @@ class _HomeScreenState extends State<HomeScreen>
                         ),
                       ),
                       Text(
-                        '$symbol${entries[i].value.toStringAsFixed(0)}',
+                        '$symbol${entries[i].value.toStringAsFixed(2)}',
                         style: GoogleFonts.nunito(
                           fontSize: 11,
                           fontWeight: FontWeight.w700,
@@ -783,7 +780,7 @@ class _HomeScreenState extends State<HomeScreen>
                     overflow: TextOverflow.ellipsis,
                   ),
                   Text(
-                    '$symbol${entry.value.toStringAsFixed(0)}',
+                    '$symbol${entry.value.toStringAsFixed(2)}',
                     style: GoogleFonts.nunito(
                       fontSize: 16,
                       fontWeight: FontWeight.w800,
@@ -1043,7 +1040,7 @@ class _HomeScreenState extends State<HomeScreen>
             ),
           ),
           Text(
-            '$amountPrefix$symbol${expense.amount.toStringAsFixed(0)}',
+            '$amountPrefix$symbol${expense.amount.toStringAsFixed(2)}',
             style: GoogleFonts.nunito(
               fontSize: 15,
               fontWeight: FontWeight.w800,
@@ -1290,9 +1287,7 @@ class _EditTransactionDialogState extends State<_EditTransactionDialog> {
     super.initState();
     final expense = widget.expense;
     _amountCtrl = TextEditingController(
-      text: expense.amount.toStringAsFixed(
-        expense.amount.truncateToDouble() == expense.amount ? 0 : 2,
-      ),
+      text: expense.amount.toStringAsFixed(2),
     );
     _descriptionCtrl = TextEditingController(text: expense.description);
     _isExpense = expense.isExpense;
@@ -1411,7 +1406,7 @@ class _EditTransactionDialogState extends State<_EditTransactionDialog> {
               ),
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
-                value: _selectedCategory,
+                initialValue: _selectedCategory,
                 decoration: const InputDecoration(
                   labelText: 'Category',
                   prefixIcon: Icon(Icons.category_outlined),
