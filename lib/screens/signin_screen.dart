@@ -103,7 +103,7 @@ void _showReEnableDialog() {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       title: Row(
         children: [
-          const Text('2xl', style: TextStyle(fontSize: 22)),
+          const Text('2x', style: TextStyle(fontSize: 22)),
           const SizedBox(width: 8),
           Text(
             'Account Disabled',
