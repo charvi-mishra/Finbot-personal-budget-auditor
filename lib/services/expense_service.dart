@@ -50,19 +50,12 @@ class ExpenseService {
   /// Returns expenses for the current month only
   Future<List<Expense>> getCurrentMonthExpenses(String userId) async {
     final now = DateTime.now();
-    final start = DateTime(now.year, now.month, 1);
-    final end = DateTime(now.year, now.month + 1, 1);
-
-    // NOTE: This query also requires a composite index on (userId ASC, date ASC).
-    // Same as above — Firebase will print the index URL in logs if missing.
-    final snap = await _expenses
-        .where('userId', isEqualTo: userId)
-        .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(start))
-        .where('date', isLessThan: Timestamp.fromDate(end))
-        .get();
-
-    return snap.docs
-        .map((d) => Expense.fromMap(d.data() as Map<String, dynamic>, d.id))
+    final expenses = await getUserExpenses(userId);
+    return expenses
+        .where(
+          (expense) =>
+              expense.date.year == now.year && expense.date.month == now.month,
+        )
         .toList();
   }
 }

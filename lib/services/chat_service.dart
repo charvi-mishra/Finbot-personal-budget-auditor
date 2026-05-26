@@ -118,9 +118,15 @@ YOUR BEHAVIOR:
           'parts': [{'text': assistantMessage}],
         });
 
-        await _processExpenseFromResponse(assistantMessage, user, userMessage);
+        final spendingWarning = await _processExpenseFromResponse(
+          assistantMessage,
+          user,
+          userMessage,
+        );
 
-        return _cleanMessage(assistantMessage);
+        final cleanMessage = _cleanMessage(assistantMessage);
+        if (spendingWarning == null) return cleanMessage;
+        return '$cleanMessage\n\n$spendingWarning';
       } else {
         // Remove the user message we just added since the request failed
         debugPrint('Gemini error: ${response.statusCode} ${response.body}');
@@ -220,7 +226,7 @@ YOUR BEHAVIOR:
     return response;
   }
 
-  Future<void> _processExpenseFromResponse(
+  Future<String?> _processExpenseFromResponse(
     String response,
     UserModel user,
     String rawMessage,
@@ -229,10 +235,10 @@ YOUR BEHAVIOR:
       final parsed = _extractExpense(response, rawMessage, user);
       if (parsed == null) {
         debugPrint('Expense parsing skipped: no structured expense found.');
-        return;
+        return null;
       }
 
-      if (parsed.amount <= 0) return;
+      if (parsed.amount <= 0) return null;
 
       // Always fetch fresh user data to avoid stale savings value
       final freshUser = await _authService.getUser(user.uid);
@@ -264,6 +270,8 @@ YOUR BEHAVIOR:
         debugPrint(
           'Savings updated from $currentSavings to ${newSavings < 0 ? 0 : newSavings}',
         );
+
+        return await _buildMonthlySpendingWarning(user.uid, freshUser ?? user);
       } else {
         // Save income entry to Firestore
         final income = Expense(
@@ -290,6 +298,27 @@ YOUR BEHAVIOR:
     } catch (e) {
       debugPrint('Expense processing failed: $e');
     }
+
+    return null;
+  }
+
+  Future<String?> _buildMonthlySpendingWarning(
+    String userId,
+    UserModel user,
+  ) async {
+    final monthlyIncome = user.monthlyIncome;
+    if (monthlyIncome == null || monthlyIncome <= 0) return null;
+
+    final monthlyExpenses =
+        await _expenseService.getCurrentMonthExpenses(userId);
+    final monthlySpent = monthlyExpenses
+        .where((expense) => expense.isExpense)
+        .fold<double>(0.0, (sum, expense) => sum + expense.amount);
+
+    if (monthlySpent < monthlyIncome * 0.5) return null;
+
+    final percent = (monthlySpent / monthlyIncome * 100).toStringAsFixed(0);
+    return 'Heads up: you have spent $percent% of your monthly income this month. Be wary of spending further unless it is truly needed.';
   }
 
   ParsedExpense? _extractExpense(

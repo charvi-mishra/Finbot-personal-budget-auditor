@@ -82,6 +82,9 @@ class _HomeScreenState extends State<HomeScreen>
         final expenses = provider.expenses;
         final categoryTotals = provider.categoryTotals;
         final totalSpent = provider.totalSpent;
+        final currentMonthSpent = provider.currentMonthSpent;
+        final monthlySpendingPercent =
+            (provider.monthlySpendingRatio * 100).toStringAsFixed(0);
         final currentSavings = provider.currentSavings;
         final currSymbol = _getCurrencySymbol(user?.country ?? 'India');
 
@@ -323,6 +326,22 @@ class _HomeScreenState extends State<HomeScreen>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      if (provider.hasMonthlySpendingWarning &&
+                          user?.monthlyIncome != null) ...[
+                        _monthlySpendingWarning(
+                          spent: _formatCurrency(
+                            currentMonthSpent,
+                            user?.country,
+                          ),
+                          income: _formatCurrency(
+                            user!.monthlyIncome!,
+                            user.country,
+                          ),
+                          percent: monthlySpendingPercent,
+                        ),
+                        const SizedBox(height: 24),
+                      ],
+
                       // Category Spending
                       if (categoryTotals.isNotEmpty) ...[
                         _sectionTitle('Spending by Category'),
@@ -406,6 +425,67 @@ class _HomeScreenState extends State<HomeScreen>
           ),
         ],
       );
+
+  Widget _monthlySpendingWarning({
+    required String spent,
+    required String income,
+    required String percent,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppTheme.accent.withValues(alpha: 0.16),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: AppTheme.accent.withValues(alpha: 0.45),
+        ),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 38,
+            height: 38,
+            decoration: BoxDecoration(
+              color: AppTheme.accent.withValues(alpha: 0.28),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(
+              Icons.warning_amber_rounded,
+              color: Color(0xFFB45309),
+              size: 24,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Spending alert',
+                  style: GoogleFonts.nunito(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                    color: AppTheme.textDark,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'You have spent $spent this month, which is $percent% of your $income monthly income. Be wary of spending further unless it is truly needed.',
+                  style: GoogleFonts.nunito(
+                    fontSize: 13,
+                    height: 1.35,
+                    color: AppTheme.textMid,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
   void _goToSignIn() {
     Navigator.pushReplacement(

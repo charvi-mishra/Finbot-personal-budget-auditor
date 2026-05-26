@@ -29,6 +29,29 @@ class AppProvider extends ChangeNotifier {
       .where((expense) => expense.isExpense)
       .fold(0, (sum, e) => sum + e.amount);
 
+  List<Expense> get currentMonthExpenses {
+    final now = DateTime.now();
+    return _expenses
+        .where(
+          (expense) =>
+              expense.isExpense &&
+              expense.date.year == now.year &&
+              expense.date.month == now.month,
+        )
+        .toList();
+  }
+
+  double get currentMonthSpent =>
+      currentMonthExpenses.fold(0.0, (sum, e) => sum + e.amount);
+
+  double get monthlySpendingRatio {
+    final monthlyIncome = _user?.monthlyIncome;
+    if (monthlyIncome == null || monthlyIncome <= 0) return 0;
+    return currentMonthSpent / monthlyIncome;
+  }
+
+  bool get hasMonthlySpendingWarning => monthlySpendingRatio >= 0.5;
+
   double get currentSavings {
     if (_user == null) return 0;
     return _user!.currentSavings ?? 0;
